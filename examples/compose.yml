@@ -1,0 +1,69 @@
+services:
+  bulwark-app:
+    image: docker.io/nfrastack/bulwark:latest
+    container_name: bulwark-app
+    ports:
+      - 3000:3000
+      #- 80:80 # With ENABLE_NGINX=TRUE
+    volumes:
+      - ./config:/config
+      - ./data:/data
+      - ./logs:/logs
+    environment:
+      - TIMEZONE=America/Vancouver
+
+      - BULWARK_MODE=full
+
+      - JMAP_SERVER_URL=https://mail.example.com
+
+      # - ADMIN_PASS=supersecretpassword
+      # - SESSION_SECRET=                     # Generate with: 'openssl rand -base64 32' (required for Remember me + settings sync)
+      # - APP_NAME=Bulwark Webmail
+      # - APP_SHORT_NAME=Bulwark
+      # - APP_DESCRIPTION=Self-hosted webmail
+      # - SETTINGS_SYNC_ENABLED=true          # Sync settings across devices (needs SESSION_SECRET)
+      # - BULWARK_TELEMETRY=on                # Opt into the anonymous heartbeat (default off)
+      # - BULWARK_UPDATE_CHECK=off            # Disable release update checks
+      # - SEARCH_ENGINE_INDEXING=false        # Allow search engines to index (default false)
+      # - LOGIN_COMPANY_NAME=                 # Company name shown above the version on login
+      # - LOGIN_SHOW_VERSION=false            # Hide version from unauthenticated visitors
+      # - TRUSTED_PROXY_DEPTH=1               # X-Forwarded-For hops to trust (raise behind multiple proxies)
+      # - LOG_LEVEL=info
+      # - LOG_FORMAT=text                     # or 'json' for log aggregation
+    restart: always
+
+  # bulwark-lite-app:
+  #   image: docker.io/nfrastack/bulwark:latest
+  #   container_name: bulwark-lite-app
+  #   ports:
+  #     - 8080:80
+  #   volumes:
+  #     - ./logs:/logs
+  #     # - ./config.json:/config/config.json:ro # Optional: mount your own Lite config over the generated one
+  #     # - ./custom:/override/custom:ro
+  #     # - ./custom-scripts:/override/custom-scripts:ro
+  #   environment:
+  #     - TIMEZONE=America/Vancouver
+  #
+  #     - BULWARK_MODE=lite       # Lite mode (static files via nginx)
+  #     - BULWARK_JMAP_SERVER_URL=https://mail.example.com
+  #   restart: always
+
+  # bulwark-relay:
+  #   image: docker.io/nfrastack/bulwark:latest
+  #   container_name: bulwark-relay
+  #   ports:
+  #     - 3003:3003
+  #   volumes:
+  #     - ./data:/data
+  #     - ./logs:/logs
+  #     # - ./fcm-service-account.json:/data/relay/fcm-service-account.json:ro
+  #   environment:
+  #     - TIMEZONE=America/Vancouver
+  #
+  #     - BULWARK_MODE=relay  # Relay mode (PUSH service to FCM or UnifiedPush)
+  #     # - VAPID_PUBLIC_KEY= # Generate with: 'npx web-push generate-vapid-keys'
+  #     # - VAPID_PRIVATE_KEY=
+  #     # - VAPID_SUBJECT=mailto:postmaster@example.com
+  #     # - FCM_SERVICE_ACCOUNT_JSON= # Inline JSON or absolute path (mobile push)
+  #   restart: always

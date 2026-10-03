@@ -1,0 +1,96 @@
+#!/command/with-contenv bash
+# SPDX-FileCopyrightText: © 2026 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
+
+source /container/base/functions/container/init
+prepare_service
+SERVICE_NAME="bulwark"
+
+_container_env_explicit() {
+    [ -f "/var/run/s6/basedir/env/${1}" ] || [ -f "/run/s6/basedir/env/${1}" ]
+}
+
+_bulwark_modes=",$(echo "${BULWARK_MODE,,}" | tr -d '[:space:]'),"
+_bulwark_full=false; _bulwark_lite=false; _bulwark_relay=false
+[[ "${_bulwark_modes}" == *",full,"* ]] && _bulwark_full=true
+[[ "${_bulwark_modes}" == *",lite,"* ]] && _bulwark_lite=true
+[[ "${_bulwark_modes}" == *",relay,"* ]] && _bulwark_relay=true
+
+_bulwark_label=""
+${_bulwark_full} && _bulwark_label="FULL"
+${_bulwark_lite} && _bulwark_label="${_bulwark_label:+${_bulwark_label}+}LITE"
+${_bulwark_relay} && _bulwark_label="${_bulwark_label:+${_bulwark_label}+}RELAY"
+[ -z "${_bulwark_label}" ] && _bulwark_label="FULL"
+
+if ${_bulwark_lite} ; then
+    print_info "Bulwark mode: ${_bulwark_label}"
+    if _container_env_explicit "ENABLE_NGINX" && var_false "${ENABLE_NGINX}" ; then
+        print_warn "ENABLE_NGINX=FALSE is incompatible with BULWARK_MODE=lite - force enabling nginx"
+    fi
+    _container_build_env " \
+                            10-nginx/ENABLE_NGINX=TRUE \
+                            10-nginx/NGINX_SITE_ENABLED='${NGINX_SITE_ENABLED}' \
+                            10-nginx/NGINX_MODE=NORMAL \
+                         "
+elif ${_bulwark_full} ; then
+    print_info "Bulwark mode: ${_bulwark_label}"
+    if _container_env_explicit "ENABLE_NGINX" ; then
+        _container_build_env " \
+                                10-nginx/ENABLE_NGINX='${ENABLE_NGINX}' \
+                             "
+    else
+        export ENABLE_NGINX=FALSE
+        _container_build_env " \
+                                10-nginx/ENABLE_NGINX=FALSE \
+                             "
+    fi
+    if var_true "${ENABLE_NGINX}" ; then
+        print_info "Nginx frontend enabled - proxying to Node.js on port ${BULWARK_LISTEN_PORT}"
+        _container_build_env " \
+                                10-nginx/NGINX_SITE_ENABLED='${NGINX_SITE_ENABLED}' \
+                                10-nginx/NGINX_MODE=PROXY \
+                                10-nginx/NGINX_PROXY_URL='${NGINX_PROXY_URL}' \
+                                10-nginx/BULWARK_LISTEN_PORT='${BULWARK_LISTEN_PORT}' \
+                             "
+    fi
+elif ${_bulwark_relay} ; then
+    print_info "Bulwark mode: ${_bulwark_label}"
+    if _container_env_explicit "ENABLE_NGINX" ; then
+        _container_build_env " \
+                                10-nginx/ENABLE_NGINX='${ENABLE_NGINX}' \
+                             "
+    else
+        export ENABLE_NGINX=FALSE
+        _container_build_env " \
+                                10-nginx/ENABLE_NGINX=FALSE \
+                             "
+    fi
+else
+    print_info "Bulwark mode: ${_bulwark_label}"
+    if _container_env_explicit "ENABLE_NGINX" ; then
+        _container_build_env " \
+                                10-nginx/ENABLE_NGINX='${ENABLE_NGINX}' \
+                             "
+    else
+        export ENABLE_NGINX=FALSE
+        _container_build_env " \
+                                10-nginx/ENABLE_NGINX=FALSE \
+                             "
+    fi
+    if var_true "${ENABLE_NGINX}" ; then
+        print_info "Nginx frontend enabled - proxying to Node.js on port ${BULWARK_LISTEN_PORT}"
+        _container_build_env " \
+                                10-nginx/NGINX_SITE_ENABLED='${NGINX_SITE_ENABLED}' \
+                                10-nginx/NGINX_MODE=PROXY \
+                                10-nginx/NGINX_PROXY_URL='${NGINX_PROXY_URL}' \
+                                10-nginx/BULWARK_LISTEN_PORT='${BULWARK_LISTEN_PORT}' \
+                             "
+    fi
+fi
+
+if ${_bulwark_relay} ; then
+    print_info "Bulwark relay enabled on port ${RELAY_LISTEN_PORT}"
+fi
+
+liftoff

@@ -1,0 +1,51 @@
+#!/command/with-contenv bash
+# SPDX-FileCopyrightText: © 2026 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
+
+source /container/base/functions/container/init
+SERVICE_NAME="relay"
+prepare_service 20-bulwark
+
+check_container_initialized
+check_service_initialized init
+
+export NODE_ENV=production
+export PORT="${RELAY_LISTEN_PORT}" HOST="${RELAY_LISTEN_IP}" PUSH_DATA_DIR="${PUSH_DATA_PATH}"
+export FCM_SERVICE_ACCOUNT_JSON VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY VAPID_SUBJECT
+
+if [ "${RELAY_USER}" != "root" ] ; then
+    sudo_prefix="sudo -Eu ${RELAY_USER}"
+fi
+
+case "${RELAY_LOG_TYPE,,}" in
+    both )
+        SHOW_OUTPUT=TRUE
+        ${sudo_prefix} touch "${RELAY_LOG_PATH%/}"/"${RELAY_LOG_FILE}"
+    ;;
+    console | stdout )
+        SHOW_OUTPUT=TRUE
+        RELAY_LOG_PATH=/dev
+        RELAY_LOG_FILE=null
+    ;;
+    file )
+        SHOW_OUTPUT=FALSE
+        ${sudo_prefix} touch "${RELAY_LOG_PATH%/}"/"${RELAY_LOG_FILE}"
+        silent_arg="silent"
+    ;;
+    none )
+        SHOW_OUTPUT=FALSE
+        RELAY_LOG_PATH=/dev
+        RELAY_LOG_FILE=null
+        silent_arg="silent"
+    ;;
+esac
+
+
+
+liftoff
+
+print_start "Starting Bulwark Relay $(cat /opt/relay/.relay-version)"
+cd /opt/relay
+exec ${sudo_prefix} \
+                    node dist/server.js 2>&1 | ts -m '%Y-%m-%dT%H:%M.%S [relay]' | ${silent_arg} ${sudo_prefix} tee -a "${RELAY_LOG_PATH%/}"/"${RELAY_LOG_FILE}"

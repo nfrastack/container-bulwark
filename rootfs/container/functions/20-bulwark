@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: © 2026 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
+
+bulwark_mode_enabled() {
+    local _modes=",$(echo "${BULWARK_MODE,,}" | tr -d '[:space:]'),"
+    case "${_modes}" in
+        *",${1},"* )
+            return 0
+        ;;
+        * )
+            return 1
+        ;;
+    esac
+}
+
+bulwark_bootstrap_filesystem() {
+    if bulwark_mode_enabled full ; then
+        create_folder \
+                        "${SETTINGS_DATA_DIR},${ADMIN_STATE_DIR},${TELEMETRY_DATA_DIR},${VERSION_CHECK_DATA_DIR}" \
+                        "${BULWARK_USER}":"${BULWARK_GROUP}" 755
+
+        create_folder \
+                        "${ADMIN_CONFIG_DIR}" \
+                        "${BULWARK_USER}":"${BULWARK_GROUP}" 755
+
+        create_folder \
+                        "${BULWARK_LOG_PATH}" \
+                        "${BULWARK_USER}":"${BULWARK_GROUP}" 755
+
+        case "${BULWARK_LOG_TYPE,,}" in
+            file | both )
+                create_logrotate bulwark "${BULWARK_LOG_PATH%/}"/"${BULWARK_LOG_FILE}" "${BULWARK_USER}" "${BULWARK_GROUP}"
+            ;;
+        esac
+    fi
+
+    if bulwark_mode_enabled relay ; then
+        create_folder \
+                        "${PUSH_DATA_PATH}" \
+                        "${RELAY_USER}":"${RELAY_GROUP}" 755
+
+        create_folder \
+                        "${RELAY_LOG_PATH}" \
+                        "${RELAY_USER}":"${RELAY_GROUP}" 755
+
+        case "${RELAY_LOG_TYPE,,}" in
+            file | both )
+                create_logrotate relay "${RELAY_LOG_PATH%/}"/"${RELAY_LOG_FILE}" "${RELAY_USER}" "${RELAY_GROUP}"
+            ;;
+        esac
+    fi
+}
+
+bulwark_generate_lite_config() {
+    local config_file="${NGINX_WEBROOT%/}/config.json"
+
+    if [ "${SETUP_TYPE,,}" != "auto" ] ; then
+        print_notice "Manual Mode - using '${config_file}' for configuration"
+        return 0
+    fi
+
+    local operator_config="${BULWARK_CONFIG_PATH%/}/config.json"
+
+    if [ -f "${operator_config}" ] ; then
+        print_info "Linking operator config '${operator_config}' to '${config_file}'"
+        silent ln -sf "${operator_config}" "${config_file}"
+        return 0
+    fi
+
+    if [ -f "${config_file}" ] ; then
+        print_debug "Lite config already exists at '${config_file}' - skipping configuration"
+        return 0
+    fi
+
+    print_info "Generating Lite config.json"
+    write_file "${NGINX_USER}":"${NGINX_GROUP}"@"${config_file}" <<EOF
+{
+  "_comment": "Bulwark Lite nfrastack/bulwark configuration. Managed by the container (SETUP_TYPE=AUTO). Set SETUP_TYPE=MANUAL to edit.",
+  "appName": "${BULWARK_APP_NAME}",
+  "jmapServerUrl": "${BULWARK_JMAP_SERVER_URL}",
+  "allowCustomJmapEndpoint": ${BULWARK_ALLOW_CUSTOM_ENDPOINT,,},
+  "rememberMeEnabled": ${BULWARK_REMEMBER_ME,,},
+  "demoMode": ${BULWARK_DEMO_MODE,,},
+  "loginShowTotp": ${BULWARK_LOGIN_SHOW_TOTP,,},
+  "loginShowVersion": ${BULWARK_LOGIN_SHOW_VERSION,,}
+}
+EOF
+}

@@ -1,0 +1,53 @@
+#!/command/with-contenv bash
+# SPDX-FileCopyrightText: © 2026 Nfrastack <code@nfrastack.com>
+#
+# SPDX-License-Identifier: MIT
+
+source /container/base/functions/container/init
+SERVICE_NAME="bulwark"
+prepare_service single
+
+check_container_initialized
+check_service_initialized init
+
+export BULWARK_TELEMETRY
+export HOSTNAME=0.0.0.0
+export NEXT_TELEMETRY_DISABLED=1
+export NODE_ENV=production
+export PORT="${BULWARK_LISTEN_PORT}"
+export SETTINGS_DATA_DIR ADMIN_CONFIG_DIR ADMIN_STATE_DIR TELEMETRY_DATA_DIR VERSION_CHECK_DATA_DIR
+
+if [ "${BULWARK_USER}" != "root" ] ; then
+    sudo_prefix="sudo -Eu ${BULWARK_USER}"
+fi
+
+case "${BULWARK_LOG_TYPE,,}" in
+    both )
+        SHOW_OUTPUT=TRUE
+        ${sudo_prefix} touch "${BULWARK_LOG_PATH%/}"/"${BULWARK_LOG_FILE}"
+    ;;
+    console | stdout )
+        SHOW_OUTPUT=TRUE
+        BULWARK_LOG_PATH=/dev
+        BULWARK_LOG_FILE=null
+    ;;
+    file )
+        SHOW_OUTPUT=FALSE
+        ${sudo_prefix} touch "${BULWARK_LOG_PATH%/}"/"${BULWARK_LOG_FILE}"
+        silent_arg="silent"
+    ;;
+    none )
+        SHOW_OUTPUT=FALSE
+        BULWARK_LOG_PATH=/dev
+        BULWARK_LOG_FILE=null
+        silent_arg="silent"
+    ;;
+esac
+
+cd /app
+
+liftoff
+
+print_start "Starting Bulwark $(cat /app/.bulwark-version)"
+exec ${sudo_prefix} \
+                    node server.js 2>&1 | ts -m '%Y-%m-%dT%H:%M.%S [bulwark]' | ${silent_arg} ${sudo_prefix} tee -a "${BULWARK_LOG_PATH%/}"/"${BULWARK_LOG_FILE}"
