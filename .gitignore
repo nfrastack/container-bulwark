@@ -1,0 +1,4 @@
+/build-assets/src/*
+/build-assets/scripts/*
+!/build-assets/.nfrastack
+!/build-assets/.nfrastack
