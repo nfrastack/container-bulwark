@@ -18,7 +18,7 @@ LABEL \
         org.opencontainers.image.licenses="AGPL-3.0-only"
 
 ARG \
-    BULWARK_VERSION="1.12.0" \
+    BULWARK_VERSION="1.13.0" \
     BULWARK_REPO_URL="https://github.com/bulwarkmail/webmail" \
     BULWARK_RELAY_VERSION="main" \
     BULWARK_RELAY_REPO_URL="https://github.com/bulwarkmail/relay" \
