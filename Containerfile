@@ -15,10 +15,10 @@ LABEL \
         org.opencontainers.image.source="https://github.com/nfrastack/container-bulwark.git" \
         org.opencontainers.image.authors="Nfrastack <code@nfrastack.com>" \
         org.opencontainers.image.vendor="Nfrastack <https://www.nfrastack.com>" \
-        org.opencontainers.image.licenses="AGPL-3.0-only"
+        org.opencontainers.image.licenses="MIT"
 
 ARG \
-    BULWARK_VERSION="1.13.0" \
+    BULWARK_VERSION="1.14.0" \
     BULWARK_REPO_URL="https://github.com/bulwarkmail/webmail" \
     BULWARK_RELAY_VERSION="main" \
     BULWARK_RELAY_REPO_URL="https://github.com/bulwarkmail/relay" \
