@@ -43,7 +43,7 @@ RUN echo "" && \
                     10-nginx/ENABLE_NGINX=FALSE \
                     10-nginx/NGINX_CREATE_SAMPLE_HTML=FALSE \
                     10-nginx/NGINX_SITE_ENABLED=bulwark \
-                    10-nginx/NGINX_PROXY_URL="http://localhost:[env:BULWARK_LISTEN_PORT]" \
+                    10-nginx/NGINX_PROXY_URL="http://127.0.0.1:[env:BULWARK_LISTEN_PORT]" \
                " && \
     BULWARK_BUILD_DEPS_ALPINE=" \
                                 git \
@@ -78,8 +78,8 @@ RUN echo "" && \
     \
     clone_git_repo "${BULWARK_REPO_URL}" "${BULWARK_VERSION}" /usr/src/bulwark && \
     cd /usr/src/bulwark && \
-    build_assets src /usr/src/bulwark && \
-    build_assets scripts && \
+    build_assets src /build-assets/bulwark/src /usr/src/bulwark && \
+    build_assets scripts /build-assets/bulwark/scripts && \
     export NEXT_TELEMETRY_DISABLED=1 && \
     export GIT_COMMIT="${GIT_COMMIT}" && \
     export NEXT_PUBLIC_BASE_PATH="${NEXT_PUBLIC_BASE_PATH}" && \
@@ -100,7 +100,6 @@ RUN echo "" && \
     mkdir -p /container/data/bulwark && \
     cp -a .env.example /container/data/bulwark/env.example && \
     chown -R bulwark:bulwark /app && \
-    \
     export CI=true && \
     LITE_TARGET=static npm run build:lite && \
     mkdir -p /www/html && \
@@ -108,10 +107,12 @@ RUN echo "" && \
     rm -f /www/html/config.json && \
     echo "${BULWARK_VERSION}" > /www/html/.bulwark-version && \
     chown -R nginx:www-data /www/html && \
+    container_build_log add "Bulwark Webmail" "${BULWARK_VERSION}" "${BULWARK_REPO_URL}" && \
     \
     clone_git_repo "${BULWARK_RELAY_REPO_URL}" "${BULWARK_RELAY_VERSION}" /usr/src/relay && \
     cd /usr/src/relay && \
-    build_assets src /usr/src/relay && \
+    build_assets src /build-assets/relay/src /usr/src/relay && \
+    build_assets scripts /build-assets/relay/scripts && \
     npm ci --no-audit --no-fund && \
     npx tsc && \
     mkdir -p /opt/relay && \
@@ -122,8 +123,8 @@ RUN echo "" && \
     echo "${BULWARK_RELAY_VERSION}" > /opt/relay/.relay-version && \
     chown -R relay:relay /opt/relay && \
     cd /usr/src/bulwark && \
-    container_build_log add "Bulwark Webmail" "${BULWARK_VERSION}" "${BULWARK_REPO_URL}" && \
     container_build_log add "Bulwark Relay" "${BULWARK_RELAY_VERSION}" "${BULWARK_RELAY_REPO_URL}" && \
+    \
     package remove \
                     BULWARK_BUILD_DEPS \
                     && \
