@@ -8,7 +8,7 @@ SERVICE_NAME="relay"
 prepare_service 20-bulwark
 
 check_container_initialized
-check_service_initialized init
+check_service_initialized init 20-bulwark
 
 export NODE_ENV=production
 export PORT="${RELAY_LISTEN_PORT}" HOST="${RELAY_LISTEN_IP}" PUSH_DATA_DIR="${PUSH_DATA_PATH}"
