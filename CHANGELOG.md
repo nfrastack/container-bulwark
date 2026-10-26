@@ -1,3 +1,9 @@
+## 1.0.11 2026-10-26 <code at nfrastack dot com>
+
+   ### Added
+      - Bulwark 1.18.0
+
+
 ## 1.0.10 2026-10-25 <code at nfrastack dot com>
 
    ### Added
